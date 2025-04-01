@@ -335,7 +335,7 @@ namespace AzureSignTool
                             {
                                 logger.LogInformation("Skipping already signed file.");
                                 return (state.succeeded + 1, state.failed);
-                            }                            
+                            }
 
                             var result = _resiliencePipeline.Execute(() => signer.SignFile(filePath, Description, DescriptionUri, performPageHashing, logger, appendSignature));
 
