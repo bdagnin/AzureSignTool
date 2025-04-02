@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
 using Polly;
-using Polly.Retry;
+using Polly.Contrib.WaitAndRetry;
 
 using XenoAtom.CommandLine;
 
@@ -306,15 +306,8 @@ namespace AzureSignTool
                 {
                     // retry strategy for Keyvault throttling errors
                     // https://learn.microsoft.com/en-us/azure/key-vault/general/overview-throttling
-                    ResiliencePipeline _resiliencePipeline = new ResiliencePipelineBuilder()
-                        .AddRetry(new RetryStrategyOptions
-                        {
-                            ShouldHandle = new PredicateBuilder().HandleResult(result => (int)result == E_VAULT_THROTTLING),
-                            BackoffType = DelayBackoffType.Exponential,
-                            MaxRetryAttempts = clientOptions.Retry.MaxRetries,
-                            Delay = clientOptions.Retry.Delay,
-                        })
-                        .Build();
+                    var retryPolicy = Policy.HandleResult<int>(result => result == E_VAULT_THROTTLING)
+                        .WaitAndRetry(Backoff.DecorrelatedJitterBackoffV2(medianFirstRetryDelay: clientOptions.Retry.Delay, retryCount: clientOptions.Retry.MaxRetries));
 
                     Parallel.ForEach(AllFiles, options, () => (succeeded: 0, failed: 0), (filePath, pls, state) =>
                     {
@@ -336,7 +329,7 @@ namespace AzureSignTool
                                 return (state.succeeded + 1, state.failed);
                             }
 
-                            var result = _resiliencePipeline.Execute(() => signer.SignFile(filePath, SignDescription, SignDescriptionUrl, performPageHashing, logger, appendSignature));
+                            var result = retryPolicy.Execute(() => signer.SignFile(filePath, SignDescription, SignDescriptionUrl, performPageHashing, logger, appendSignature));
                             switch (result)
                             {
                                 case COR_E_BADIMAGEFORMAT:
