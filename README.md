@@ -1,7 +1,7 @@
 Azure Sign Tool
 ===============
 
-The below README is based on functionality in `main` which may not be the same as the latest released version of AzureSignTool. For README information about released versions, please see the README for the version's associated tag. The README for the current release can [be found here](https://github.com/vcsjones/AzureSignTool/blob/v6.0.0/README.md).
+The below README is based on functionality in `main` which may not be the same as the latest released version of AzureSignTool. For README information about released versions, please see the README for the version's associated tag. The README for the current release can [be found here](https://github.com/vcsjones/AzureSignTool/blob/v7.0.0/README.md).
 
 Azure Sign Tool is similar to `signtool` in the Windows SDK, with the major difference being that it uses
 Azure Key Vault for performing the signing process. The usage is like `signtool`, except with a limited set
@@ -20,7 +20,8 @@ Example usage:
 	  -v \
 	  -ifl C:\list\of\file\to\sign.txt \
 	  C:\additional\file\to\sign\program1.exe \
-	  C:\additional\file\to\sign\program2.exe
+	  C:\additional\file\to\sign\program2.exe \
+      C:\directory\of\libraries\*.dll
 
 
 The `--help` or `sign --help` option provides more detail about each parameter.
@@ -36,18 +37,18 @@ AzureSignTool can be installed in a couple of ways.
 You can install AzureSignTool from NuGet using
 
 ```powershell
-dotnet tool install --global --version 6.0.0 AzureSignTool
+dotnet tool install --global --version 7.0.0 AzureSignTool
 AzureSignTool.exe
 ```
 
-It is recommended to specify an exact version such as 6.0.0, or a latest major-minor, like 6.0.* so that major versions, which often include a breaking change, are not automatically picked up.
+It is recommended to specify an exact version such as 7.0.0, or a latest major-minor, like 7.0.* so that major versions, which often include a breaking change, are not automatically picked up.
 
 ### Single-file Download
 
-AzureSignTool provides self-contained executables on the GitHub release. For example, to download the v6.0.0 ARM64 installer:
+AzureSignTool provides self-contained executables on the GitHub release. For example, to download the v7.0.0 ARM64 installer:
 
 ```powershell
-Invoke-WebRequest https://github.com/vcsjones/AzureSignTool/releases/download/v6.0.0/AzureSignTool-arm64.exe -OutFile AzureSignTool.exe
+Invoke-WebRequest https://github.com/vcsjones/AzureSignTool/releases/download/v7.0.0/AzureSignTool-arm64.exe -OutFile AzureSignTool.exe
 .\AzureSignTool.exe
 ```
 
@@ -65,7 +66,7 @@ The WinGet package manager installs the same binary this is available from the S
 
 ### Which to use?
 
-The NuGet tool offers smaller downloads that will install faster, however requires the .NET 8 SDK to be present on the system. The NuGet tool supports x64, x86, and ARM64.
+The NuGet tool offers smaller downloads that will install faster, however requires the .NET 10 SDK to be present on the system. The NuGet tool supports x64, x86, and ARM64.
 
 The single-file downloads do not require .NET to be installed on the system at all, only to be run on a supported version of Windows. They are entirely stand-alone binaries. This makes them useful in places that .NET is not installed at all, such as a CI pipeline that is not .NET-centric or desired. Single-file currently supports x64 and ARM64. If x86 support is needed, the NuGet tool is required.
 
@@ -140,7 +141,7 @@ The single-file downloads do not require .NET to be installed on the system at a
 
 * `--quiet` [short: `-q`, required: no]: Do not print output to the log. This parameter does not accept a value and cannot be
 	combine with the `--verbose` option. The exit code of the process can be used to determine success or failure of the sign operation.
-	
+
 * `--continue-on-error` [short: `-coe`, required: no]: If multiple files to sign are specified, this flag will cause the signing process to
 	move on to the next file when signing fails. This flag modifies the exit code of the program. See the Exit Codes section for more
 	information.
@@ -190,4 +191,4 @@ a status code according to the complete signing operations.
 
 ## Requirements
 
-Windows 10 or Windows Server 2016 is required. Some features require later versions of Windows.
+Windows 10 or Windows Server 2016 is required. Some features require later versions of Windows. Support for Windows Server 2016 will be limited, so it is recommended to run on Windows Server 2022 or later.

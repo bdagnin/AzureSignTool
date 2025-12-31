@@ -11,7 +11,6 @@ using Azure.Core;
 using Azure.Security.KeyVault.Keys.Cryptography;
 using AzureSign.Core;
 using Microsoft.Extensions.FileSystemGlobbing;
-using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
@@ -31,6 +30,12 @@ namespace AzureSignTool
             if (!OperatingSystem.IsWindows())
             {
                 Console.Error.WriteLine("Azure Sign Tool is only supported on Windows.");
+                return Task.FromResult(E_PLATFORMNOTSUPPORTED);
+            }
+
+            if (!OperatingSystem.IsWindowsVersionAtLeast(10))
+            {
+                Console.Error.WriteLine("Azure Sign Tool requires Windows 10 or later.");
                 return Task.FromResult(E_PLATFORMNOTSUPPORTED);
             }
 
@@ -98,46 +103,54 @@ namespace AzureSignTool
                 if (_allFiles is null)
                 {
                     _allFiles = [];
-                    Matcher matcher = new();
 
                     foreach (string file in Files)
                     {
-                        Add(_allFiles, matcher, file);
+                        Add(_allFiles, file);
                     }
 
                     if (!string.IsNullOrWhiteSpace(InputFileList))
                     {
                         foreach(string line in File.ReadLines(InputFileList))
                         {
-                            if (string.IsNullOrWhiteSpace(line))
-                            {
-                                continue;
-                            }
-
-                            Add(_allFiles, matcher, line);
-                        }
-                    }
-
-                    PatternMatchingResult results = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(".")));
-
-                    if (results.HasMatches)
-                    {
-                        foreach (var result in results.Files)
-                        {
-                            _allFiles.Add(result.Path);
+                            Add(_allFiles, line);
                         }
                     }
                 }
 
                 return _allFiles;
 
-                static void Add(HashSet<string> collection, Matcher matcher, string item)
+                static void Add(HashSet<string> collection, string item)
                 {
+                    if (string.IsNullOrWhiteSpace(item))
+                    {
+                        return;
+                    }
+
                     // We require explicit glob pattern wildcards in order to treat it as a glob. e.g.
                     // dir/ will not be treated as a directory. It must be explicitly dir/*.exe or dir/**/*.exe, for example.
                     if (item.Contains('*'))
                     {
-                        matcher.AddInclude(item);
+                        Matcher matcher = new();
+                        string directory;
+
+                        // If the path is fully qualified then make it relative to the root since the matcher does not handle
+                        // absolute paths on its own.
+                        if (Path.IsPathFullyQualified(item) && Path.GetPathRoot(item) is string root)
+                        {
+                            directory = root;
+                            matcher.AddInclude(Path.GetRelativePath(root, item));
+                        }
+                        else
+                        {
+                            directory = ".";
+                            matcher.AddInclude(item);
+                        }
+
+                        foreach (string match in matcher.GetResultsInFullPath(directory))
+                        {
+                            collection.Add(match);
+                        }
                     }
                     else
                     {
@@ -566,7 +579,7 @@ namespace AzureSignTool
                         case X509ContentType.Cert:
                         case X509ContentType.Authenticode:
                         case X509ContentType.SerializedCert:
-                            var certificate = new X509Certificate2(path);
+                            var certificate = X509CertificateLoader.LoadCertificateFromFile(path);
                             logger.LogTrace("Including additional certificate {thumbprint}.", certificate.Thumbprint);
                             collection.Add(certificate);
                             break;
